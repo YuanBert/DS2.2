@@ -54,6 +54,7 @@ extern USARTRECIVETYPE     LeftDoorBoardUsartType;
 extern USARTRECIVETYPE     RightDoorBoardUsartType;
 
 extern uint8_t gLEDsCarFlag;
+uint16_t  dataPos;
 
 //待处理的命令
 HandingFlag     SendOpenFlag;
@@ -405,16 +406,19 @@ DS_StatusTypeDef DS_HandingCoreBoardRequest(void)
 			  sNeedToAckStruct.DeviceType[tempTableID] = 0x01;
 			  gLEDsCarFlag = 1;
 			  Table.tab[tempTableID] = 0x02;     //处理完成
+			  
 			  Table.tabCnt++; break;	
 		  }
 		  
 		if (0xB2 == CoreBoardRevDataStruct.CmdType && 0x01 == CoreBoardRevDataStruct.CmdParam)
 		{
 		    sNeedToAckStruct.AckCodeH[tempTableID] = 0x02;
+			sNeedToAckStruct.AckCodeL[tempTableID] = 0x00;
 		    sNeedToAckStruct.DeviceType[tempTableID] = 0x01;
 		    SendOpenFlag.Flag = 1;
 		    SendOpenFlag.position = tempTableID;
-		    Table.tab[tempTableID] = 0x01;    //处理中
+		    Table.tab[tempTableID] = 0x02;    //处理中
+			dataPos = tempTableID;
 		    Table.tabCnt++; break;		    
 	    }
 
@@ -506,8 +510,8 @@ DS_StatusTypeDef DS_HandingCoreBoardRequest(void)
 	  {
 		  DS_SendDataToLeftDoorBoard(CoreRevDataBuf, 7, 0xFFFF);
 		  DS_SendDataToRightDoorBoard(CoreRevDataBuf, 7, 0xFFFF);
-		  sNeedToAckStruct.AckCodeL[SendOpenFlag.position] = 0x08;
-		  Table.tab[SendOpenFlag.position] = 0x02;
+		  //sNeedToAckStruct.AckCodeL[SendOpenFlag.position] = 0x08;
+		  //Table.tab[SendOpenFlag.position] = 0x02;
 		  SendOpenFlag.Flag = 0;
 		  gLEDsCarFlag = 0; 
 	  }
@@ -533,6 +537,7 @@ DS_StatusTypeDef DS_HandingLeftDoorBoardRequest(void)
 {
 	DS_StatusTypeDef state = DS_OK;
 	uint8_t tempTableID;
+	uint8_t tempAck[6];
 	if (LeftDoorBoardRevDataStruct.RevOKFlag)
 	{
 		tempTableID = GetAvailableTableID();
@@ -559,7 +564,22 @@ DS_StatusTypeDef DS_HandingLeftDoorBoardRequest(void)
 			Table.tab[tempTableID] = 0x01;
 			Table.tabCnt++;
 			break;
-		case 0xE0:;break;
+			
+		case 0xE0: if(0 == LeftDoorBoardRevDataStruct.CmdParam)
+				{
+					tempAck[3] = 0;
+				}
+				else if(1 == LeftDoorBoardRevDataStruct.CmdParam)
+				{
+					tempAck[3] = 1;
+				}
+				tempAck[0] = 0x5B;
+				tempAck[5] = 0x5D;
+			tempAck[1] = 0xAB;
+			tempAck[2] = 0x02;
+			tempAck[4] = getXORCode(tempAck + 1,3);
+			DS_SendDataToCoreBoard(tempAck, 6, 0xFFFF);
+			;break;
 			
 		default:
 			break;
@@ -630,6 +650,16 @@ DS_StatusTypeDef DS_HandingRightDoorBoardRequest(void)
 			Table.tabCnt++;
 			break;
 		case 0xE0:
+				if(0 == LeftDoorBoardRevDataStruct.CmdParam)
+				{
+					sNeedToAckStruct.AckCodeL[dataPos] = 0;
+					//Table.tab[dataPos] = 0x02;
+				}
+				else if(1 == LeftDoorBoardRevDataStruct.CmdParam)
+				{
+					sNeedToAckStruct.AckCodeL[dataPos] = 1;
+					//Table.tab[dataPos] = 0x02;
+				}
 			;break;
 			
 		default:

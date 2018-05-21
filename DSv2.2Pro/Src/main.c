@@ -169,10 +169,11 @@ int main(void)
 	/*处理来自闸机A的数据*/
 	DS_HandingUartDataFromLeftDoorBoard();
 	DS_HandingLeftDoorBoardRequest();
-	  
+	DS_SendAckData();  
 	  /*处理来自道闸B的数据*/
 	DS_HandingUartDataFromRightDoorBoard();
 	DS_HandingRightDoorBoardRequest();
+	  
 	DS_SendAckData();
 	DS_GentleSensorCheck();
 	/*检测温度和光照*/
